@@ -1,8 +1,10 @@
 from datetime import date
-from flask import Flask 
+from flask import Flask, jsonify, request
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 from sqlalchemy import Date, ForeignKey, String, Table, Column, Float
+from flask_marshmallow import Marshmallow
+from marshmallow import ValidationError
 
 app = Flask(__name__) #Instatiating our Flask app
 
@@ -18,11 +20,12 @@ class Base(DeclarativeBase):
 #Instatiate your SQLAlchemy database:
 
 db = SQLAlchemy(model_class = Base)
+ma = Marshmallow()
 
 #Initialize my extension onto my Flask app
 
 db.init_app(app) #adding the db to the app.
-
+ma.init_app(app)
 
 ticket_mechanics = Table(
     'ticket_mechanics',
@@ -69,12 +72,38 @@ class Service_tickets(Base):
     service_date: Mapped[date] = mapped_column(Date, nullable=True)
 
     #Relationships
-    customer: Mapped['Customers'] = relationship('Customers', back_populates='loans')
-    mechanics: Mapped[list['Mechanics']] = relationship("Service_tickets", secondary=ticket_mechanics, back_populates='service_tickets') #Many to Many relationship going through the loan_books table
+    customer: Mapped['Customers'] = relationship('Customers', back_populates='service_tickets')
+    mechanics: Mapped[list['Mechanics']] = relationship("Mechanics", secondary=ticket_mechanics, back_populates='service_tickets') #Many to Many relationship going through the loan_books table
    
+#Install Marshmellow
+#pip install flask-marshmallow marshmallow-sqlalchemy
+
+class CustomerSchema(ma.SQLAlchemyAutoSchema):
+    class Meta:
+        model = Customers #Creates a schema that validates the data as defined by our Customers Model
+
+customer_schema = CustomerSchema() #Creating an instance of my schema that I can actually use to validate, deserialize, and serialze JSON
+
+
+#=========================================== CRUD for Customers =========================================
+
+@app.route('/customers', methods=['POST']) #route servers as the trigger for the function below.
+def create_customer():
+    # try:
+    #     data = customer_schema.load(request.json)
+    # except ValidationError as e:
+    #     return jsonify(e.messages) #Returning the error as a response so my client can see whats wrong.
+    
+    print("My Translated Data")
+    #print(data)
+    # new_customer = Customers(**data) #Creating User object
+    # db.session.add(new_customer)
+    # db.session.commit()
+    return "Creating a customer"
+
 
 with app.app_context():
     db.create_all() #Creating our database tables
 
 
-app.run()
+app.run(debug=True)
